@@ -18,8 +18,8 @@ import jsonparser.Maker;
  *
  * @author Sunil
  */
-public class JsonParser {
-//    String content = "";
+class JsonParser {
+    JsonObject jsonObject;
     /**
      * @param args the command line arguments
      */
@@ -34,26 +34,22 @@ public class JsonParser {
 //     I have used test.json in which i tried different json files using examples from the net.
 //     In the future i plan to pass this class the path of the file itself and then this class can open the file
 //     and pass the contents of the file to the JsonObject class.
-    public static void main(String[] args) throws IOException {
-        String path = System.getProperty("user.dir");
+    JsonParser(String path) throws IOException {
         String content = "";
-        System.out.println(System.getProperty("user.dir"));
         try {
             // Since i have only test.json i have hardcoded the path to the file in the repository
             // it will be changed in the future verison.
-            Scanner scanner = new Scanner(new File(path + "\\src\\jsonparser\\test.json"));
-            content = new String ( Files.readAllBytes(Paths.get(path + "\\src\\jsonparser\\test.json") ) );
+            content = new String ( Files.readAllBytes(Paths.get(path) ) );
 
         } catch (FileNotFoundException ex) {
             Logger.getLogger(JsonParser.class.getName()).log(Level.SEVERE, null, ex);
         }
 //         After opening the file, just pass the contents to the json object.
-        JsonObject jo = new JsonObject(content, 0);
+        this.jsonObject = new JsonObject(content, 0);
+        System.out.println(jsonObject.obj());
 //         if the json contains an array, the Object o should be of the type ArrayList, 
 //         according to the contents of the json file, the class of 'o' will be different.
-        System.out.println((jo.o));
-        ArrayList ar = (ArrayList)(jo.o);
-        System.out.println(ar.get(0));
+        System.out.println((jsonObject.o));
     }
 //    private 
 }
@@ -81,11 +77,13 @@ class JsonObject {
     }
 
     
-    
+    public String obj(){
+        return this.o.getClass().getSimpleName();
+    }
     
 
 
-    // This methos is just a handy way to print something.
+    // This method is just a handy way to print something.
     private void print(Object o) {
         System.out.println(o);
     }
