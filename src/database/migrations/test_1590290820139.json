@@ -1,0 +1,12 @@
+{
+	"columns" : {
+		"id" : "int",
+		"name" : "varchar(255)",
+		"tempid" : "int"
+	},
+	"constraints" : {
+		"UNIQUE" : ["id", "name"],
+		"primary key" : ["id"],
+		"foreign key" : [{"id" : ["temp", "id"]}, {"tempid": ["temp", "id"]}]
+	}
+}
