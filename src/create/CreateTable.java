@@ -15,6 +15,8 @@ import java.util.logging.Logger;
  *
  * @author Sunil
  */
+// Responsible to add files named by user as the name of the table in databse with a timstamp so at the time of migration
+// the order of table creation is maintained.
 public class CreateTable {
     public CreateTable(String name) {
         String path = System.getProperty("user.dir");

@@ -16,15 +16,18 @@ import jsonparser.JsonParser;
  *
  * @author Sunil
  */
+// This acts as a init as well as a dependency injector.
 public class Initializer {
     private DataBaseHelper dbhelper;
     public Initializer() {
+        // Determining the path for conf.json
         String path = System.getProperty("user.dir");
         path = path + "\\conf.json";
         LinkedHashMap contents = new LinkedHashMap();
         try {
             
             try {
+                // Parsing the conf.json file.
                 JsonParser json = new JsonParser(path);
                 contents = (LinkedHashMap) json.jsonObject.o;
             } catch (IOException ex) {
@@ -32,13 +35,14 @@ public class Initializer {
             }
             System.out.println(contents.keySet());
     }
+        // incase the format of config file is not a linkedhashmap as reuired the user gets an error.
     catch(ClassCastException ex) {
             System.out.println("Config file Format Error");
             System.exit(0);
         }
+        // passing the dbname, username, port and other contents of config file to dbhelper.
     this.dbhelper = new DataBaseHelper(contents);
     }
-
     public DataBaseHelper getDbhelper() {
         return dbhelper;
     }
