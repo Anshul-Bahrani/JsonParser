@@ -75,12 +75,18 @@ public class DataBaseHelper {
             con.setAutoCommit(false);
             String stmt = "CREATE OR REPLACE TABLE " + tablename + " ( ";
             Iterator it = columns. entrySet(). iterator();
-//            while(it.hasNext()) {
-//                Map.Entry pair = (Map.Entry)it.next();
-//                System.out.println(pair.getKey() + " = " + pair.getValue());
-//                stmt = stmt + "`" + pair.getKey() + "` " + pair.getValue() + " , ";
-//            }
-//            Utils.print(stmt);
+            while(it.hasNext()) {
+                Map.Entry pair = (Map.Entry)it.next();
+                System.out.println(pair.getKey() + " = " + pair.getValue());
+                stmt = stmt + "`" + pair.getKey() + "` " + pair.getValue() + " , ";
+            }
+            Utils.print(stmt);
+            stmt = stmt.substring(0, stmt.length() - 2);
+            stmt = stmt + ");";
+            Utils.print(stmt);
+            Statement st = con.createStatement();
+            st.execute(stmt);
+            stmt = "";
             // decided to create a separate method so that all the constarints i am providing until now are visible clearly.
             HashMap<String, Integer> validconstraints = this.giveConstraints();
             int count = 0;
@@ -88,37 +94,43 @@ public class DataBaseHelper {
             if (constraints != null) {
                 
                 Iterator it1 = constraints. entrySet(). iterator();
-                while(it1.hasNext()) {
-                    
+                while(it1.hasNext()) { 
                     Map.Entry pair = (Map.Entry)it1.next();
                     System.out.println(pair.getKey() + " = " + pair.getValue());
                     String temp = pair.getKey().toString().toUpperCase();
                     // if the name of the constriant is not something i proide, then throw an exception indicating the same.
                     if (validconstraints.get(temp) != null) {
-                        ArrayList<Object> vals = (ArrayList<Object>) pair.getValue();
+                        ArrayList<Object> vals;
                         // for unique and primary key.
                         // for example refer the test.json file in the migrations folder
                         // this will be the partial query generated for unique constraint:
-                        //  CONSTRAINT `unique0` UNIQUE (id, name),
+                        //  ALTER TABLE test ADD CONSTRAINT `unique1` UNIQUE (id);
+                        //ALTER TABLE test ADD CONSTRAINT `unique2` UNIQUE (name);
                         // and this for primary key:
-                        // CONSTRAINT `primary key1` PRIMARY KEY (id), 
-                        
-                        // count is maintained to give a unique constarint name.
-                        if (validconstraints.get(temp) == 0 && vals.size() > 0) {
-                            stmt = stmt + "CONSTRAINT `" + temp.toLowerCase() + count + "` " + temp + " (";
-                            count ++;
+                        //  ALTER TABLE test ADD CONSTRAINT `primary key3` PRIMARY KEY (id);
+                        // count is maintained to give a unique constarint name for every constraint.
+                        if (validconstraints.get(temp) == 0) {
+                            vals = (ArrayList<Object>) pair.getValue();
                             Utils.print(pair.getValue().getClass().getSimpleName());
                             for (int i = 0;i < vals.size(); i ++) {
+                                count ++;
+                                stmt = "ALTER TABLE " + tablename + " ADD ";
                                 String val = (String) vals.get(i);
-                                stmt = stmt + val + ", ";
+                                stmt = stmt + "CONSTRAINT `" + temp.toLowerCase() + count + "` " + temp + " (" + val + ");";
+//                                stmt = stmt + val + ", ";
+                                Utils.print(stmt);
+                                st = con.createStatement();
+                                st.execute(stmt);
+                                
                             }
-                            stmt = stmt.substring(0, stmt.length() - 2);
-                            stmt = stmt + "), ";
+//                            stmt = stmt.substring(0, stmt.length() - 2);
+//                            stmt = stmt + "), ";
                         }
                         // for the same example the foreign key constraint is :
-                        //  CONSTRAINT `foreign key2` FOREIGN KEY (id) REFERENCES temp(id) ,
-                        //  CONSTRAINT `foreign key3` FOREIGN KEY (tempid) REFERENCES temp(id)
+                        // ALTER TABLE test ADD CONSTRAINT `foreign key3` FOREIGN KEY (id) REFERENCES temp(id);
+                        // ALTER TABLE test ADD CONSTRAINT `foreign key4` FOREIGN KEY (tempid) REFERENCES temp(id);
                         if (validconstraints.get(temp) == 1) {
+                            vals = (ArrayList<Object>) pair.getValue();
                             Utils.print("forr" + pair.getValue().getClass().getSimpleName());
                             for (int i = 0;i < vals.size(); i ++) {
                                 LinkedHashMap val = (LinkedHashMap) vals.get(i);
@@ -136,14 +148,104 @@ public class DataBaseHelper {
                                     System.err.println("Invalid Foreign key constraint, please refer test for example");
                                     throw new SQLException();
                                 }
+                                stmt = "ALTER TABLE " + tablename + " ADD ";
                                 String reftable = (String) references.get(0);
                                 String refcol = (String) references.get(1);
-                                stmt = stmt + "CONSTRAINT `" + temp.toLowerCase() + count + "` " + temp.toUpperCase() + " (" + key + ") REFERENCES " + reftable + "(" + refcol + ") ,";
+                                stmt = stmt + "CONSTRAINT `" + temp.toLowerCase() + count + "` " + temp.toUpperCase() + " (" + key + ") REFERENCES " + reftable + "(" + refcol + ");";
                                 count ++;
+                                Utils.print(stmt);
+                                st = con.createStatement();
+                                st.execute(stmt);
                             }
                         }
-                        if(validconstraints.get(temp) == 1) {
-                            
+                        // this is for not null constraint
+                        // output of eg. test file is:
+                        // ALTER TABLE test MODIFY id int NOT NULL;
+                        //ALTER TABLE test MODIFY name varchar(255) NOT NULL;
+                        // now i need to search the whole key value pairs of column to get the datatype of the key provided
+                        // for default constraint.
+                        // after doing that only the string or varchar datatypes needed a single quotes.
+                        if(validconstraints.get(temp) == 2) {
+                            vals = (ArrayList<Object>) pair.getValue();
+                            Utils.print("forr        " + pair.getValue().getClass().getSimpleName());
+                            for (int i = 0;i < vals.size(); i ++) {
+                                count ++;
+                                String val = (String) vals.get(i);
+                                it = columns. entrySet(). iterator();
+                                String datatype = "";
+                                while(it.hasNext()) {
+                                    pair = (Map.Entry)it.next();
+                                    if(pair.getKey().equals(val)) {
+                                        datatype = pair.getValue().toString();
+                                    }
+                                }
+                                if(datatype.equals("")) {
+                                    Utils.print("Invalid key found in NOT NULL constraint: " + val);
+                                    throw new SQLException();
+                                }
+                                stmt = "ALTER TABLE " + tablename + " MODIFY ";
+                                stmt = stmt + val + " "+ datatype + " " + temp + ";";
+                                Utils.print(stmt);
+                                st = con.createStatement();
+                                st.execute(stmt);
+                                
+                            }
+                        }
+                        // This is for the default value 
+                        // output for eg. test file is:
+                        // ALTER TABLE test ALTER name SET  DEFAULT 'unknown'
+                        //ALTER TABLE test ALTER id SET  DEFAULT 5.0
+                        if(validconstraints.get(temp) == 3) {
+                            LinkedHashMap valls = (LinkedHashMap<Object, Object>) pair.getValue();
+                            Utils.print("forr        " + pair.getValue().getClass().getSimpleName());
+                            Iterator itt = valls. entrySet(). iterator();
+                            while(itt.hasNext()) {
+                                pair = (Map.Entry)itt.next();
+                                Utils.print(pair.getValue().getClass().getSimpleName());
+                                if(pair.getValue().getClass().getSimpleName().equals("String")) {
+                                    stmt = "ALTER TABLE " + tablename + " ALTER " + pair.getKey() + " SET  "+ temp + " '" + pair.getValue() + "'";
+                                }
+                                else {
+                                    stmt = "ALTER TABLE " + tablename + " ALTER " + pair.getKey() + " SET  "+ temp + " " + pair.getValue();
+                                }
+                                
+                                Utils.print(stmt);
+                                st = con.createStatement();
+                                st.execute(stmt);
+                            }
+                        }
+                        //this is for index and unique index 
+                        // output for eg. test file is
+                        // CREATE UNIQUE INDEX index7 ON test (id ,name);
+                        // output will be same for index as well as unique index
+                        if(validconstraints.get(temp) == 4) {
+                            vals = (ArrayList<Object>) pair.getValue();
+                            stmt = "CREATE INDEX index_name\n" + "ON table_name (column1, column2, ...);";
+                            stmt = "CREATE " + temp + " " + "index" + count + " ON " + tablename + " ("; 
+                            for (int i = 0;i < vals.size(); i ++) {
+                                count ++;
+                                String val = (String) vals.get(i);
+                                stmt = stmt + val + " ,";
+                                
+                            }
+                            stmt = stmt.substring(0, stmt.length() - 2);
+                            stmt = stmt + ");";
+                            Utils.print(stmt);
+                            st = con.createStatement();
+                            st.execute(stmt);
+                        }
+                        // This is for check constriant
+                        // eg of test file 
+                        // ALTER TABLE test ADD CONSTRAINT check10 CHECK (id<=500 AND name!= 'Anshul');
+                        // This will be the output after the following if....
+                        // now this is not the best made check constraint but i thought hard and found some ways but i dont know if they were right or no.
+                        if(validconstraints.get(temp) == 5) {
+                            count++;
+                            String valss = (String) pair.getValue();
+                            stmt = "ALTER TABLE " + tablename + " ADD CONSTRAINT " + temp.toLowerCase() + count + " " + temp + " (" + valss + ");";
+                            Utils.print(stmt);
+                            st = con.createStatement();
+                            st.execute(stmt);
                         }
                     }
                     else {
@@ -152,9 +254,9 @@ public class DataBaseHelper {
                     }
                 }
             }
-            stmt = stmt.substring(0, stmt.length() - 2);
-            stmt = stmt + ");";
-            Utils.print(stmt);
+//            stmt = stmt.substring(0, stmt.length() - 2);
+//            stmt = stmt + ";";
+//            Utils.print(stmt);
             //
             //
             // final query generated
@@ -163,8 +265,8 @@ public class DataBaseHelper {
             // and have doubts that is this the right way to go.
             //
             //
-            Statement st = con.createStatement();
-            st.execute(stmt);
+//            st = con.createStatement();
+//            st.execute(stmt);
             con.commit();
         }catch(SQLException ex) {
             try {
@@ -202,6 +304,11 @@ public class DataBaseHelper {
         toreturn.put("UNIQUE", 0);
         toreturn.put("PRIMARY KEY", 0);
         toreturn.put("FOREIGN KEY", 1);
+        toreturn.put("NOT NULL", 2);
+        toreturn.put("DEFAULT", 3);
+        toreturn.put("INDEX", 4);
+        toreturn.put("UNIQUE INDEX", 4);
+        toreturn.put("CHECK", 5);
         return toreturn;
     }
 }
